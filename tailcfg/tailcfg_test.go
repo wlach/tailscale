@@ -30,6 +30,7 @@ func TestHostinfoEqual(t *testing.T) {
 		"GoArch",
 		"RoutableIPs", "RequestTags",
 		"Services", "NetInfo",
+		"CanRouteAll",
 	}
 	if have := fieldsOf(reflect.TypeOf(Hostinfo{})); !reflect.DeepEqual(have, hiHandles) {
 		t.Errorf("Hostinfo.Equal check might be out of sync\nfields: %q\nhandled: %q\n",
@@ -178,6 +179,16 @@ func TestHostinfoEqual(t *testing.T) {
 			&Hostinfo{},
 			false,
 		},
+		{
+			&Hostinfo{CanRouteAll: true},
+			&Hostinfo{},
+			false,
+		},
+		{
+			&Hostinfo{CanRouteAll: true},
+			&Hostinfo{CanRouteAll: true},
+			true,
+		},
 	}
 	for i, tt := range tests {
 		got := tt.a.Equal(tt.b)
@@ -191,7 +202,7 @@ func TestNodeEqual(t *testing.T) {
 	nodeHandles := []string{
 		"ID", "StableID", "Name", "User", "Sharer",
 		"Key", "KeyExpiry", "Machine", "DiscoKey",
-		"Addresses", "AllowedIPs", "Endpoints", "DERP", "Hostinfo",
+		"Addresses", "AllowedIPs", "CanRouteAll", "Endpoints", "DERP", "Hostinfo",
 		"Created", "LastSeen", "KeepAlive", "MachineAuthorized",
 		"ComputedName", "computedHostIfDifferent", "ComputedNameWithHost",
 	}
@@ -309,6 +320,16 @@ func TestNodeEqual(t *testing.T) {
 			&Node{AllowedIPs: []netaddr.IPPrefix{}},
 			&Node{AllowedIPs: nil},
 			false,
+		},
+		{
+			&Node{CanRouteAll: true},
+			&Node{},
+			false,
+		},
+		{
+			&Node{CanRouteAll: true},
+			&Node{CanRouteAll: true},
+			true,
 		},
 		{
 			&Node{Addresses: []netaddr.IPPrefix{}},

@@ -32,20 +32,22 @@ func (src *Prefs) Clone() *Prefs {
 // A compilation failure here means this code must be regenerated, with command:
 //   tailscale.com/cmd/cloner -type Prefs
 var _PrefsNeedsRegeneration = Prefs(struct {
-	ControlURL       string
-	RouteAll         bool
-	AllowSingleHosts bool
-	CorpDNS          bool
-	WantRunning      bool
-	ShieldsUp        bool
-	AdvertiseTags    []string
-	Hostname         string
-	OSVersion        string
-	DeviceModel      string
-	NotepadURLs      bool
-	ForceDaemon      bool
-	AdvertiseRoutes  []netaddr.IPPrefix
-	NoSNAT           bool
-	NetfilterMode    preftype.NetfilterMode
-	Persist          *controlclient.Persist
+	ControlURL            string
+	RouteAll              bool
+	AllowSingleHosts      bool
+	CorpDNS               bool
+	WantRunning           bool
+	ShieldsUp             bool
+	RouteAllVia           string
+	AdvertiseTags         []string
+	Hostname              string
+	OSVersion             string
+	DeviceModel           string
+	NotepadURLs           bool
+	ForceDaemon           bool
+	AdvertiseRoutes       []netaddr.IPPrefix
+	AdvertiseDefaultRoute bool
+	NoSNAT                bool
+	NetfilterMode         preftype.NetfilterMode
+	Persist               *controlclient.Persist
 }{})

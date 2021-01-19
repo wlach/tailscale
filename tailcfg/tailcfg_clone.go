@@ -72,6 +72,7 @@ var _NodeNeedsRegeneration = Node(struct {
 	DiscoKey                DiscoKey
 	Addresses               []netaddr.IPPrefix
 	AllowedIPs              []netaddr.IPPrefix
+	CanRouteAll             bool
 	Endpoints               []string
 	DERP                    string
 	Hostinfo                Hostinfo
@@ -116,6 +117,7 @@ var _HostinfoNeedsRegeneration = Hostinfo(struct {
 	RequestTags   []string
 	Services      []Service
 	NetInfo       *NetInfo
+	CanRouteAll   bool
 }{})
 
 // Clone makes a deep copy of NetInfo.

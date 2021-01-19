@@ -30,7 +30,7 @@ func fieldsOf(t reflect.Type) (fields []string) {
 func TestPrefsEqual(t *testing.T) {
 	tstest.PanicOnLog()
 
-	prefsHandles := []string{"ControlURL", "RouteAll", "AllowSingleHosts", "CorpDNS", "WantRunning", "ShieldsUp", "AdvertiseTags", "Hostname", "OSVersion", "DeviceModel", "NotepadURLs", "ForceDaemon", "AdvertiseRoutes", "NoSNAT", "NetfilterMode", "Persist"}
+	prefsHandles := []string{"ControlURL", "RouteAll", "AllowSingleHosts", "CorpDNS", "WantRunning", "ShieldsUp", "RouteAllVia", "AdvertiseTags", "Hostname", "OSVersion", "DeviceModel", "NotepadURLs", "ForceDaemon", "AdvertiseRoutes", "AdvertiseDefaultRoute", "NoSNAT", "NetfilterMode", "Persist"}
 	if have := fieldsOf(reflect.TypeOf(Prefs{})); !reflect.DeepEqual(have, prefsHandles) {
 		t.Errorf("Prefs.Equal check might be out of sync\nfields: %q\nhandled: %q\n",
 			have, prefsHandles)
@@ -166,6 +166,22 @@ func TestPrefsEqual(t *testing.T) {
 		},
 
 		{
+			&Prefs{RouteAllVia: "1.2.3.4"},
+			&Prefs{RouteAllVia: "2.3.4.5"},
+			false,
+		},
+		{
+			&Prefs{RouteAllVia: "1.2.3.4"},
+			&Prefs{},
+			false,
+		},
+		{
+			&Prefs{RouteAllVia: "1.2.3.4"},
+			&Prefs{RouteAllVia: "1.2.3.4"},
+			true,
+		},
+
+		{
 			&Prefs{AdvertiseRoutes: nil},
 			&Prefs{AdvertiseRoutes: []netaddr.IPPrefix{}},
 			true,
@@ -188,6 +204,17 @@ func TestPrefsEqual(t *testing.T) {
 		{
 			&Prefs{AdvertiseRoutes: nets("192.168.0.0/24", "10.1.0.0/16")},
 			&Prefs{AdvertiseRoutes: nets("192.168.0.0/24", "10.1.0.0/16")},
+			true,
+		},
+
+		{
+			&Prefs{AdvertiseDefaultRoute: true},
+			&Prefs{},
+			false,
+		},
+		{
+			&Prefs{AdvertiseDefaultRoute: true},
+			&Prefs{AdvertiseDefaultRoute: true},
 			true,
 		},
 

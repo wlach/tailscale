@@ -58,6 +58,11 @@ type Prefs struct {
 	// connections. This overrides tailcfg.Hostinfo's ShieldsUp.
 	ShieldsUp bool
 
+	// RouteAllVia specifies a Tailscale IP of the node that should be
+	// set as the default route for this machine. If empty, the
+	// default route is untouched.
+	RouteAllVia string
+
 	// AdvertiseTags specifies groups that this node wants to join, for
 	// purposes of ACL enforcement. These can be referenced from the ACL
 	// security policy. Note that advertising a tag doesn't guarantee that
@@ -101,6 +106,13 @@ type Prefs struct {
 	// Tailscale network as reachable through the current
 	// node.
 	AdvertiseRoutes []netaddr.IPPrefix
+
+	// AdvertiseDefaultRoute specifies that this node is willing to
+	// route all internet traffic on behalf of other nodes. It's
+	// separate from AdvertiseRoutes because its UI/UX differs from
+	// "regular" subnet routes, and to avoid issues related to
+	// dual-stacking.
+	AdvertiseDefaultRoute bool
 
 	// NoSNAT specifies whether to source NAT traffic going to
 	// destinations in AdvertiseRoutes. The default is to apply source
@@ -150,6 +162,12 @@ func (p *Prefs) pretty(goos string) string {
 	if len(p.AdvertiseRoutes) > 0 || goos == "linux" {
 		fmt.Fprintf(&sb, "routes=%v ", p.AdvertiseRoutes)
 	}
+	if p.AdvertiseDefaultRoute {
+		sb.WriteString("defroute=true ")
+	}
+	if p.RouteAllVia != "" {
+		fmt.Fprintf(&sb, "defvia=%s", p.RouteAllVia)
+	}
 	if len(p.AdvertiseRoutes) > 0 || p.NoSNAT {
 		fmt.Fprintf(&sb, "snat=%v ", !p.NoSNAT)
 	}
@@ -195,12 +213,14 @@ func (p *Prefs) Equals(p2 *Prefs) bool {
 		p.WantRunning == p2.WantRunning &&
 		p.NotepadURLs == p2.NotepadURLs &&
 		p.ShieldsUp == p2.ShieldsUp &&
+		p.RouteAllVia == p2.RouteAllVia &&
 		p.NoSNAT == p2.NoSNAT &&
 		p.NetfilterMode == p2.NetfilterMode &&
 		p.Hostname == p2.Hostname &&
 		p.OSVersion == p2.OSVersion &&
 		p.DeviceModel == p2.DeviceModel &&
 		p.ForceDaemon == p2.ForceDaemon &&
+		p.AdvertiseDefaultRoute == p2.AdvertiseDefaultRoute &&
 		compareIPNets(p.AdvertiseRoutes, p2.AdvertiseRoutes) &&
 		compareStrings(p.AdvertiseTags, p2.AdvertiseTags) &&
 		p.Persist.Equals(p2.Persist)

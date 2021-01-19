@@ -169,17 +169,18 @@ type Node struct {
 	// Sharer, if non-zero, is the user who shared this node, if different than User.
 	Sharer UserID `json:",omitempty"`
 
-	Key        NodeKey
-	KeyExpiry  time.Time
-	Machine    MachineKey
-	DiscoKey   DiscoKey
-	Addresses  []netaddr.IPPrefix // IP addresses of this Node directly
-	AllowedIPs []netaddr.IPPrefix // range of IP addresses to route to this node
-	Endpoints  []string           `json:",omitempty"` // IP+port (public via STUN, and local LANs)
-	DERP       string             `json:",omitempty"` // DERP-in-IP:port ("127.3.3.40:N") endpoint
-	Hostinfo   Hostinfo
-	Created    time.Time
-	LastSeen   *time.Time `json:",omitempty"`
+	Key         NodeKey
+	KeyExpiry   time.Time
+	Machine     MachineKey
+	DiscoKey    DiscoKey
+	Addresses   []netaddr.IPPrefix // IP addresses of this Node directly
+	AllowedIPs  []netaddr.IPPrefix // range of IP addresses to route to this node
+	CanRouteAll bool               // available for default routing if desired
+	Endpoints   []string           `json:",omitempty"` // IP+port (public via STUN, and local LANs)
+	DERP        string             `json:",omitempty"` // DERP-in-IP:port ("127.3.3.40:N") endpoint
+	Hostinfo    Hostinfo
+	Created     time.Time
+	LastSeen    *time.Time `json:",omitempty"`
 
 	KeepAlive bool `json:",omitempty"` // open and keep open a connection to this peer
 
@@ -415,6 +416,7 @@ type Hostinfo struct {
 	RequestTags   []string           `json:",omitempty"` // set of ACL tags this node wants to claim
 	Services      []Service          `json:",omitempty"` // services advertised by this machine
 	NetInfo       *NetInfo           `json:",omitempty"`
+	CanRouteAll   bool               `json:",omitempty"` // Can route all traffic if desired
 
 	// NOTE: any new fields containing pointers in this type
 	//       require changes to Hostinfo.Equal.
@@ -899,6 +901,7 @@ func (n *Node) Equal(n2 *Node) bool {
 		n.DiscoKey == n2.DiscoKey &&
 		eqCIDRs(n.Addresses, n2.Addresses) &&
 		eqCIDRs(n.AllowedIPs, n2.AllowedIPs) &&
+		n.CanRouteAll == n2.CanRouteAll &&
 		eqStrings(n.Endpoints, n2.Endpoints) &&
 		n.DERP == n2.DERP &&
 		n.Hostinfo.Equal(&n2.Hostinfo) &&
