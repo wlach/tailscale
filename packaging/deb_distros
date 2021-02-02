@@ -1,0 +1,10 @@
+ubuntu/16.04
+ubuntu/18.04
+ubuntu/19.10
+ubuntu/20.04
+ubuntu/20.10
+debian/stretch
+debian/buster
+debian/bullseye
+debian/sid
+raspbian/buster

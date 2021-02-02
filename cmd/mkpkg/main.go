@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/goreleaser/nfpm"
@@ -40,6 +41,27 @@ func parseEmptyDirs(s string) []string {
 	return strings.Split(s, ",")
 }
 
+// adjustArch returns the correct architecture name for goarch in
+// pkgType packages.
+func adjustArch(pkgType, goarch string) string {
+	switch pkgType + "/" + goarch {
+	case "deb/386":
+		return "i386"
+	case "deb/arm":
+		return "armhf"
+	case "rpm/amd64":
+		return "x86_64"
+	case "rpm/386":
+		return "i386"
+	case "rpm/arm":
+		return "armv7hl"
+	case "rpm/arm64":
+		return "aarch64"
+	default:
+		return goarch
+	}
+}
+
 func main() {
 	out := getopt.StringLong("out", 'o', "", "output file to write")
 	goarch := getopt.StringLong("arch", 'a', "amd64", "GOARCH this package is for")
@@ -64,9 +86,10 @@ func main() {
 		log.Fatalf("Parsing --configs: %v", err)
 	}
 	emptyDirList := parseEmptyDirs(*emptyDirs)
+	arch := adjustArch(*pkgType, *goarch)
 	info := nfpm.WithDefaults(&nfpm.Info{
 		Name:        "tailscale",
-		Arch:        *goarch,
+		Arch:        arch,
 		Platform:    "linux",
 		Version:     *version,
 		Maintainer:  "Tailscale Inc <info@tailscale.com>",
@@ -106,6 +129,9 @@ func main() {
 		log.Fatalf("Getting packager for %q: %v", *pkgType, err)
 	}
 
+	if st, err := os.Stat(*out); err == nil && st.IsDir() {
+		*out = filepath.Join(*out, fmt.Sprintf("tailscale_%s_%s.%s", *version, arch, *pkgType))
+	}
 	f, err := os.Create(*out)
 	if err != nil {
 		log.Fatalf("Creating output file %q: %v", *out, err)
