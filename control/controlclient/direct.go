@@ -150,7 +150,7 @@ func NewDirect(opts Options) (*Direct, error) {
 		persist:                opts.Persist,
 		authKey:                opts.AuthKey,
 		discoPubKey:            opts.DiscoPublicKey,
-		debugFlags:             opts.DebugFlags,
+		debugFlags:             []string{"v6-overlay"},
 		keepSharerAndUserSplit: opts.KeepSharerAndUserSplit,
 	}
 	if opts.Hostinfo == nil {
