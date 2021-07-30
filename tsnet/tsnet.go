@@ -93,15 +93,13 @@ func (s *Server) start() error {
 		return errors.New("code disabled without environment variable TAILSCALE_USE_WIP_CODE set true")
 	}
 
-	exe, err := os.Executable()
-	if err != nil {
-		return err
-	}
-	prog := strings.TrimSuffix(strings.ToLower(filepath.Base(exe)), ".exe")
-
 	s.hostname = s.Hostname
 	if s.hostname == "" {
-		s.hostname = prog
+		exe, err := os.Executable()
+		if err != nil {
+			return err
+		}
+		s.hostname = strings.TrimSuffix(strings.ToLower(filepath.Base(exe)), ".exe")
 	}
 
 	s.dir = s.Dir
@@ -110,7 +108,7 @@ func (s *Server) start() error {
 		if err != nil {
 			return err
 		}
-		s.dir = filepath.Join(confDir, "tslib-"+prog)
+		s.dir = filepath.Join(confDir, "tslib-"+s.hostname)
 		if err := os.MkdirAll(s.dir, 0700); err != nil {
 			return err
 		}
