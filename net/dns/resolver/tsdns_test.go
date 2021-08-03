@@ -19,6 +19,7 @@ import (
 	dns "golang.org/x/net/dns/dnsmessage"
 	"inet.af/netaddr"
 	"tailscale.com/tstest"
+	"tailscale.com/types/dnstype"
 	"tailscale.com/util/dnsname"
 	"tailscale.com/wgengine/monitor"
 )
@@ -459,10 +460,10 @@ func TestDelegate(t *testing.T) {
 	defer r.Close()
 
 	cfg := dnsCfg
-	cfg.Routes = map[dnsname.FQDN][]netaddr.IPPort{
+	cfg.Routes = map[dnsname.FQDN][]dnstype.Resolver{
 		".": {
-			netaddr.MustParseIPPort(v4server.PacketConn.LocalAddr().String()),
-			netaddr.MustParseIPPort(v6server.PacketConn.LocalAddr().String()),
+			dnstype.Resolver{Addr: v4server.PacketConn.LocalAddr().String()},
+			dnstype.Resolver{Addr: v6server.PacketConn.LocalAddr().String()},
 		},
 	}
 	r.SetConfig(cfg)
@@ -634,9 +635,9 @@ func TestDelegateSplitRoute(t *testing.T) {
 	defer r.Close()
 
 	cfg := dnsCfg
-	cfg.Routes = map[dnsname.FQDN][]netaddr.IPPort{
-		".":      {netaddr.MustParseIPPort(server1.PacketConn.LocalAddr().String())},
-		"other.": {netaddr.MustParseIPPort(server2.PacketConn.LocalAddr().String())},
+	cfg.Routes = map[dnsname.FQDN][]dnstype.Resolver{
+		".":      {{Addr: server1.PacketConn.LocalAddr().String()}},
+		"other.": {{Addr: server2.PacketConn.LocalAddr().String()}},
 	}
 	r.SetConfig(cfg)
 
@@ -691,10 +692,8 @@ func TestDelegateCollision(t *testing.T) {
 	defer r.Close()
 
 	cfg := dnsCfg
-	cfg.Routes = map[dnsname.FQDN][]netaddr.IPPort{
-		".": {
-			netaddr.MustParseIPPort(server.PacketConn.LocalAddr().String()),
-		},
+	cfg.Routes = map[dnsname.FQDN][]dnstype.Resolver{
+		".": {{Addr: server.PacketConn.LocalAddr().String()}},
 	}
 	r.SetConfig(cfg)
 
@@ -998,10 +997,8 @@ func BenchmarkFull(b *testing.B) {
 	defer r.Close()
 
 	cfg := dnsCfg
-	cfg.Routes = map[dnsname.FQDN][]netaddr.IPPort{
-		".": {
-			netaddr.MustParseIPPort(server.PacketConn.LocalAddr().String()),
-		},
+	cfg.Routes = map[dnsname.FQDN][]dnstype.Resolver{
+		".": {{Addr: server.PacketConn.LocalAddr().String()}},
 	}
 
 	tests := []struct {
