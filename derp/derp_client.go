@@ -352,7 +352,22 @@ type PeerPresentMessage key.Public
 func (PeerPresentMessage) msg() {}
 
 // ServerInfoMessage is sent by the server upon first connect.
-type ServerInfoMessage struct{}
+type ServerInfoMessage struct {
+	// TokenBucketBytesPerSecond is how many bytes per second the
+	// server says it will accept, including all framing bytes.
+	//
+	// Zero means unspecified. There might be a limit, but the
+	// client need not try to respect it.
+	TokenBucketBytesPerSecond int
+
+	// TokenBucketBytesBurst is how many bytes the server will
+	// allow to burst, temporarily violating
+	// TokenBucketBytesPerSecond.
+	//
+	// Zero means unspecified. There might be a limit, but the
+	// client need not try to respect it.
+	TokenBucketBytesBurst int
+}
 
 func (ServerInfoMessage) msg() {}
 
@@ -440,12 +455,14 @@ func (c *Client) recvTimeout(timeout time.Duration) (m ReceivedMessage, err erro
 			// needing to wait an RTT to discover the version at startup.
 			// We'd prefer to give the connection to the client (magicsock)
 			// to start writing as soon as possible.
-			_, err := c.parseServerInfo(b)
+			si, err := c.parseServerInfo(b)
 			if err != nil {
 				return nil, fmt.Errorf("invalid server info frame: %v", err)
 			}
-			// TODO: add the results of parseServerInfo to ServerInfoMessage if we ever need it.
-			return ServerInfoMessage{}, nil
+			return ServerInfoMessage{
+				TokenBucketBytesPerSecond: si.TokenBucketBytesPerSecond,
+				TokenBucketBytesBurst:     si.TokenBucketBytesBurst,
+			}, nil
 		case frameKeepAlive:
 			// A one-way keep-alive message that doesn't require an acknowledgement.
 			// This predated framePing/framePong.
