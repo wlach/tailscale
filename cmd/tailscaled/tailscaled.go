@@ -385,7 +385,12 @@ func tryEngine(logf logger.Logf, linkMon *monitor.Mon, name string) (e wgengine.
 	conf := wgengine.Config{
 		ListenPort:  args.port,
 		LinkMonitor: linkMon,
-		BIRDSocket:  args.birdSocketPath,
+	}
+	if args.birdSocketPath != "" {
+		conf.BIRDClient, err = createBIRDClient(args.birdSocketPath)
+		if err != nil {
+			return nil, false, err
+		}
 	}
 	useNetstack = name == "userspace-networking"
 	if !useNetstack {

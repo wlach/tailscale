@@ -24,7 +24,6 @@ import (
 	"golang.zx2c4.com/wireguard/device"
 	"golang.zx2c4.com/wireguard/tun"
 	"inet.af/netaddr"
-	"tailscale.com/chirp"
 	"tailscale.com/control/controlclient"
 	"tailscale.com/health"
 	"tailscale.com/ipn/ipnstate"
@@ -93,9 +92,9 @@ type userspaceEngine struct {
 	dns               *dns.Manager
 	magicConn         *magicsock.Conn
 	linkMon           *monitor.Mon
-	linkMonOwned      bool              // whether we created linkMon (and thus need to close it)
-	linkMonUnregister func()            // unsubscribes from changes; used regardless of linkMonOwned
-	birdClient        *chirp.BIRDClient // or nil
+	linkMonOwned      bool       // whether we created linkMon (and thus need to close it)
+	linkMonUnregister func()     // unsubscribes from changes; used regardless of linkMonOwned
+	birdClient        BIRDClient // or nil
 
 	testMaybeReconfigHook func() // for tests; if non-nil, fires if maybeReconfigWireguardLocked called
 
@@ -146,6 +145,12 @@ func (e *userspaceEngine) GetInternals() (_ *tstun.Wrapper, _ *magicsock.Conn, o
 	return e.tundev, e.magicConn, true
 }
 
+// BIRDClient handles communication with BIRD.
+type BIRDClient interface {
+	EnableProtocol(p string) error
+	DisableProtocol(p string) error
+}
+
 // Config is the engine configuration.
 type Config struct {
 	// Tun is the device used by the Engine to exchange packets with
@@ -180,7 +185,7 @@ type Config struct {
 
 	// BIRDSocket determines whether this engine will configure BIRD
 	// whenever the this node is a primary subnet router.
-	BIRDSocket string
+	BIRDClient BIRDClient
 }
 
 func NewFakeUserspaceEngine(logf logger.Logf, listenPort uint16) (Engine, error) {
@@ -263,13 +268,10 @@ func NewUserspaceEngine(logf logger.Logf, conf Config) (_ Engine, reterr error) 
 		tundev:         tsTUNDev,
 		router:         conf.Router,
 		confListenPort: conf.ListenPort,
+		birdClient:     conf.BIRDClient,
 	}
-	if conf.BIRDSocket != "" {
-		var err error
-		e.birdClient, err = chirp.New(conf.BIRDSocket)
-		if err != nil {
-			return nil, err
-		}
+
+	if e.birdClient != nil {
 		// Disable the protocol at start time.
 		if err := e.birdClient.DisableProtocol("tailscale"); err != nil {
 			return nil, err
