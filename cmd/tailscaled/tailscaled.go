@@ -289,11 +289,10 @@ func run() error {
 		return err
 	}
 
-	var ns *netstack.Impl
-	if useNetstack || wrapNetstack {
-		onlySubnets := wrapNetstack && !useNetstack
-		ns = mustStartNetstack(logf, e, onlySubnets)
-	}
+	ns := mustStartNetstack(logf, e)
+	ns.ProcessSSH.Set(true) // for now
+	ns.ProcessAll = useNetstack
+	ns.ProcessSubnets = wrapNetstack && !useNetstack
 
 	if socksListener != nil {
 		srv := tssocks.NewServer(logger.WithPrefix(logf, "socks5: "), e, ns)
@@ -435,12 +434,12 @@ func runDebugServer(mux *http.ServeMux, addr string) {
 	}
 }
 
-func mustStartNetstack(logf logger.Logf, e wgengine.Engine, onlySubnets bool) *netstack.Impl {
+func mustStartNetstack(logf logger.Logf, e wgengine.Engine) *netstack.Impl {
 	tunDev, magicConn, ok := e.(wgengine.InternalsGetter).GetInternals()
 	if !ok {
 		log.Fatalf("%T is not a wgengine.InternalsGetter", e)
 	}
-	ns, err := netstack.Create(logf, tunDev, e, magicConn, onlySubnets)
+	ns, err := netstack.Create(logf, tunDev, e, magicConn)
 	if err != nil {
 		log.Fatalf("netstack.Create: %v", err)
 	}

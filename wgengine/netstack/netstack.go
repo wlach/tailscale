@@ -34,6 +34,8 @@ import (
 	"tailscale.com/net/packet"
 	"tailscale.com/net/tsaddr"
 	"tailscale.com/net/tstun"
+	"tailscale.com/syncs"
+	"tailscale.com/types/ipproto"
 	"tailscale.com/types/logger"
 	"tailscale.com/types/netmap"
 	"tailscale.com/util/dnsname"
@@ -54,13 +56,16 @@ type Impl struct {
 	// port other than accepting it and closing it.
 	ForwardTCPIn func(c net.Conn, port uint16)
 
-	ipstack     *stack.Stack
-	linkEP      *channel.Endpoint
-	tundev      *tstun.Wrapper
-	e           wgengine.Engine
-	mc          *magicsock.Conn
-	logf        logger.Logf
-	onlySubnets bool // whether we only want to handle subnet relaying
+	ProcessAll     bool
+	ProcessSSH     syncs.AtomicBool // if configured by IPN prefs
+	ProcessSubnets bool             // whether we want to handle subnet relaying
+
+	ipstack *stack.Stack
+	linkEP  *channel.Endpoint
+	tundev  *tstun.Wrapper
+	e       wgengine.Engine
+	mc      *magicsock.Conn
+	logf    logger.Logf
 
 	// atomicIsLocalIPFunc holds a func that reports whether an IP
 	// is a local (non-subnet) Tailscale IP address of this
@@ -81,7 +86,7 @@ const nicID = 1
 const mtu = 1500
 
 // Create creates and populates a new Impl.
-func Create(logf logger.Logf, tundev *tstun.Wrapper, e wgengine.Engine, mc *magicsock.Conn, onlySubnets bool) (*Impl, error) {
+func Create(logf logger.Logf, tundev *tstun.Wrapper, e wgengine.Engine, mc *magicsock.Conn) (*Impl, error) {
 	if mc == nil {
 		return nil, errors.New("nil magicsock.Conn")
 	}
@@ -130,7 +135,6 @@ func Create(logf logger.Logf, tundev *tstun.Wrapper, e wgengine.Engine, mc *magi
 		e:                   e,
 		mc:                  mc,
 		connsOpenBySubnetIP: make(map[netaddr.IP]int),
-		onlySubnets:         onlySubnets,
 	}
 	ns.atomicIsLocalIPFunc.Store(tsaddr.NewContainsIPFunc(nil))
 	return ns, nil
@@ -265,9 +269,6 @@ func (ns *Impl) updateIPs(nm *netmap.NetworkMap) {
 		isAddr[ipp] = true
 	}
 	for _, ipp := range nm.SelfNode.AllowedIPs {
-		if ns.onlySubnets && isAddr[ipp] {
-			continue
-		}
 		newIPs[ipPrefixToAddressWithPrefix(ipp)] = true
 	}
 
@@ -436,11 +437,28 @@ func (ns *Impl) isLocalIP(ip netaddr.IP) bool {
 	return ns.atomicIsLocalIPFunc.Load().(func(netaddr.IP) bool)(ip)
 }
 
+func (ns *Impl) isInboundTSSH(p *packet.Parsed) bool {
+	return p.IPProto == ipproto.TCP &&
+		p.Dst.Port() == 22 &&
+		ns.isLocalIP(p.Dst.IP())
+}
+
+func (ns *Impl) shouldProcessInbound(p *packet.Parsed, t *tstun.Wrapper) bool {
+	if ns.ProcessAll {
+		return true
+	}
+	if ns.ProcessSSH.Get() && ns.isInboundTSSH(p) {
+		return true
+	}
+	if ns.ProcessSubnets && ns.isLocalIP(p.Dst.IP()) {
+		return true
+	}
+	return false
+}
+
 func (ns *Impl) injectInbound(p *packet.Parsed, t *tstun.Wrapper) filter.Response {
-	if ns.onlySubnets && ns.isLocalIP(p.Dst.IP()) {
-		// In hybrid ("only subnets") mode, bail out early if
-		// the traffic is destined for an actual Tailscale
-		// address. The real host OS interface will handle it.
+	if !ns.shouldProcessInbound(p, t) {
+		// Let host network stack (if any) deal with it.
 		return filter.Accept
 	}
 	var pn tcpip.NetworkProtocolNumber
@@ -517,6 +535,17 @@ func (ns *Impl) acceptTCP(r *tcp.ForwarderRequest) {
 	// forwardTCP will block until the TCP handshake is complete.
 	c := gonet.NewTCPConn(&wq, ep)
 
+	ns.logf("XXX LocalPort %v, ssh=%v, isLocalIP=%v", reqDetails.LocalPort, ns.ProcessSSH.Get(), ns.isLocalIP(dialIP))
+	if reqDetails.LocalPort == 22 && ns.ProcessSSH.Get() && ns.isLocalIP(dialIP) {
+		ns.logf("XXX doing ssh demo thing....")
+		if err := doSSHDemoThing(c); err != nil {
+
+			ns.logf("XXX SSH error: %v", err)
+		} else {
+			ns.logf("XXX SSH all good")
+		}
+		return
+	}
 	if ns.ForwardTCPIn != nil {
 		ns.ForwardTCPIn(c, reqDetails.LocalPort)
 		return
