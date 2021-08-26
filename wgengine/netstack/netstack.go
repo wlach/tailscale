@@ -264,7 +264,8 @@ func (ns *Impl) updateIPs(nm *netmap.NetworkMap) {
 	for _, ipp := range nm.SelfNode.Addresses {
 		isAddr[ipp] = true
 	}
-	for _, ipp := range nm.SelfNode.AllowedIPs {
+	// Use RoutableIPs here as that matches what we do in non-netstack mode.
+	for _, ipp := range nm.SelfNode.Hostinfo.RoutableIPs {
 		if ns.onlySubnets && isAddr[ipp] {
 			continue
 		}

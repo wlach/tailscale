@@ -73,13 +73,14 @@ var args struct {
 	// or comma-separated list thereof.
 	tunname string
 
-	cleanup    bool
-	debug      string
-	port       uint16
-	statepath  string
-	socketpath string
-	verbose    int
-	socksAddr  string // listen address for SOCKS5 server
+	cleanup        bool
+	debug          string
+	port           uint16
+	statepath      string
+	socketpath     string
+	birdSocketPath string
+	verbose        int
+	socksAddr      string // listen address for SOCKS5 server
 }
 
 var (
@@ -111,6 +112,7 @@ func main() {
 	flag.Var(flagtype.PortValue(&args.port, 0), "port", "UDP port to listen on for WireGuard and peer-to-peer traffic; 0 means automatically select")
 	flag.StringVar(&args.statepath, "state", paths.DefaultTailscaledStateFile(), "path of state file")
 	flag.StringVar(&args.socketpath, "socket", paths.DefaultTailscaledSocket(), "path of the service unix socket")
+	flag.StringVar(&args.birdSocketPath, "bird-socket", "", "path of the bird unix socket")
 	flag.BoolVar(&printVersion, "version", false, "print version information and exit")
 
 	if len(os.Args) > 1 {
@@ -150,6 +152,11 @@ func main() {
 	if args.socketpath == "" && runtime.GOOS != "windows" {
 		log.SetFlags(0)
 		log.Fatalf("--socket is required")
+	}
+
+	if args.birdSocketPath != "" && runtime.GOOS != "linux" {
+		log.SetFlags(0)
+		log.Fatalf("--bird-socket is only available on linux")
 	}
 
 	err := run()
@@ -378,6 +385,7 @@ func tryEngine(logf logger.Logf, linkMon *monitor.Mon, name string) (e wgengine.
 	conf := wgengine.Config{
 		ListenPort:  args.port,
 		LinkMonitor: linkMon,
+		BIRDSocket:  args.birdSocketPath,
 	}
 	useNetstack = name == "userspace-networking"
 	if !useNetstack {
