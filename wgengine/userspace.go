@@ -145,10 +145,10 @@ func (e *userspaceEngine) GetInternals() (_ *tstun.Wrapper, _ *magicsock.Conn, o
 	return e.tundev, e.magicConn, true
 }
 
-// BIRDClient handles communication with BIRD.
+// BIRDClient handles communication with the BIRD Internet Routing Daemon.
 type BIRDClient interface {
-	EnableProtocol(p string) error
-	DisableProtocol(p string) error
+	EnableProtocol(proto string) error
+	DisableProtocol(proto string) error
 }
 
 // Config is the engine configuration.
@@ -183,8 +183,8 @@ type Config struct {
 	// Used in "fake" mode for development.
 	RespondToPing bool
 
-	// BIRDSocket determines whether this engine will configure BIRD
-	// whenever the this node is a primary subnet router.
+	// BIRDClient, if non-nil will be used to configure BIRD whenever
+	// this node is a primary subnet router.
 	BIRDClient BIRDClient
 }
 

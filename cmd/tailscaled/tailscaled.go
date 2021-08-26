@@ -84,8 +84,9 @@ var args struct {
 }
 
 var (
-	installSystemDaemon   func([]string) error // non-nil on some platforms
-	uninstallSystemDaemon func([]string) error // non-nil on some platforms
+	installSystemDaemon   func([]string) error                      // non-nil on some platforms
+	uninstallSystemDaemon func([]string) error                      // non-nil on some platforms
+	createBIRDClient      func(string) (wgengine.BIRDClient, error) // non-nil on some platforms
 )
 
 var subCommands = map[string]*func([]string) error{
@@ -154,9 +155,9 @@ func main() {
 		log.Fatalf("--socket is required")
 	}
 
-	if args.birdSocketPath != "" && runtime.GOOS != "linux" {
+	if args.birdSocketPath != "" && createBIRDClient == nil {
 		log.SetFlags(0)
-		log.Fatalf("--bird-socket is only available on linux")
+		log.Fatalf("--bird-socket is not supported on this platform")
 	}
 
 	err := run()
@@ -386,7 +387,7 @@ func tryEngine(logf logger.Logf, linkMon *monitor.Mon, name string) (e wgengine.
 		ListenPort:  args.port,
 		LinkMonitor: linkMon,
 	}
-	if args.birdSocketPath != "" {
+	if args.birdSocketPath != "" && createBIRDClient != nil {
 		conf.BIRDClient, err = createBIRDClient(args.birdSocketPath)
 		if err != nil {
 			return nil, false, err

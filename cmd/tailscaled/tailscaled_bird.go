@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build linux || darwin || freebsd || openbsd
+// +build linux darwin freebsd openbsd
+
 package main
 
 import (
@@ -9,6 +12,8 @@ import (
 	"tailscale.com/wgengine"
 )
 
-func createBIRDClient(p string) (wgengine.BIRDClient, error) {
-	return chirp.New(p)
+func init() {
+	createBIRDClient = func(ctlSocket string) (wgengine.BIRDClient, error) {
+		return chirp.New(ctlSocket)
+	}
 }

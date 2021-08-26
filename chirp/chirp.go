@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build linux
+//go:build linux || darwin || freebsd || openbsd
+// +build linux darwin freebsd openbsd
 
-// Package chirp implements a client to communicate with BIRD.
+// Package chirp implements a client to communicate with the BIRD Internet
+// Routing Daemon..
 package chirp
 
 import (
@@ -22,7 +24,7 @@ func New(socket string) (*BIRDClient, error) {
 	return &BIRDClient{socket: socket, conn: conn}, nil
 }
 
-// BIRDClient handles communication with BIRD.
+// BIRDClient handles communication with the BIRD Internet Routing Daemon.
 type BIRDClient struct {
 	socket string
 	conn   net.Conn
