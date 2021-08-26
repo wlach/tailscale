@@ -96,7 +96,12 @@ func newHarness(t *testing.T) *Harness {
 	hs := &http.Server{Handler: mux}
 	go hs.Serve(ln)
 
-	run(t, dir, "ssh-keygen", "-t", "ed25519", "-f", "machinekey", "-N", ``)
+	cmd := exec.Command("ssh-keygen", "-t", "ed25519", "-f", "machinekey", "-N", ``)
+	cmd.Dir = dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Logf("ssh-keygen: %s", out)
+		t.Fatalf("ssh-keygen: %v", err)
+	}
 	pubkey, err := os.ReadFile(filepath.Join(dir, "machinekey.pub"))
 	if err != nil {
 		t.Fatalf("can't read ssh key: %v", err)
