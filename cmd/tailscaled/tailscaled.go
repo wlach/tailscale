@@ -157,7 +157,7 @@ func main() {
 
 	if args.birdSocketPath != "" && createBIRDClient == nil {
 		log.SetFlags(0)
-		log.Fatalf("--bird-socket is not supported on this platform")
+		log.Fatalf("--bird-socket is not supported on %s", runtime.GOOS)
 	}
 
 	err := run()

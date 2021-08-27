@@ -120,7 +120,8 @@ type userspaceEngine struct {
 	destIPActivityFuncs map[netaddr.IP]func()
 	statusBufioReader   *bufio.Reader // reusable for UAPI
 	lastStatusPollTime  mono.Time     // last time we polled the engine status
-	lastIsSubnetRouter  bool
+
+	lastIsSubnetRouter bool // was the node a primary subnet router in the last run.
 
 	mu                  sync.Mutex         // guards following; see lock order comment below
 	netMap              *netmap.NetworkMap // or nil
@@ -149,6 +150,7 @@ func (e *userspaceEngine) GetInternals() (_ *tstun.Wrapper, _ *magicsock.Conn, o
 type BIRDClient interface {
 	EnableProtocol(proto string) error
 	DisableProtocol(proto string) error
+	Close() error
 }
 
 // Config is the engine configuration.
@@ -183,7 +185,7 @@ type Config struct {
 	// Used in "fake" mode for development.
 	RespondToPing bool
 
-	// BIRDClient, if non-nil will be used to configure BIRD whenever
+	// BIRDClient, if non-nil, will be used to configure BIRD whenever
 	// this node is a primary subnet router.
 	BIRDClient BIRDClient
 }
@@ -1131,6 +1133,7 @@ func (e *userspaceEngine) Close() {
 	e.tundev.Close()
 	if e.birdClient != nil {
 		e.birdClient.DisableProtocol("tailscale")
+		e.birdClient.Close()
 	}
 	close(e.waitCh)
 }

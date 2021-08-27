@@ -6,10 +6,11 @@
 // +build linux darwin freebsd openbsd
 
 // Package chirp implements a client to communicate with the BIRD Internet
-// Routing Daemon..
+// Routing Daemon.
 package chirp
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 	"strings"
@@ -17,18 +18,27 @@ import (
 
 // New creates a BIRDClient.
 func New(socket string) (*BIRDClient, error) {
-	conn, err := newConn(socket)
+	conn, err := net.Dial("unix", socket)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to BIRD: %w", err)
 	}
-	return &BIRDClient{socket: socket, conn: conn}, nil
+	b := &BIRDClient{socket: socket, conn: conn, scanner: bufio.NewScanner(conn)}
+	// Read and discard the first line as that is the welcome message.
+	if _, err := b.readLine(); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
 // BIRDClient handles communication with the BIRD Internet Routing Daemon.
 type BIRDClient struct {
-	socket string
-	conn   net.Conn
+	socket  string
+	conn    net.Conn
+	scanner *bufio.Scanner
 }
+
+// Close closes the underlying connection to BIRD.
+func (b *BIRDClient) Close() error { return b.conn.Close() }
 
 // DisableProtocol disables the provided protocol.
 func (b *BIRDClient) DisableProtocol(protocol string) error {
@@ -62,21 +72,15 @@ func (b *BIRDClient) exec(cmd string) (string, error) {
 	if _, err := b.conn.Write([]byte(cmd)); err != nil {
 		return "", err
 	}
-	buf := make([]byte, 4096)
-	if _, err := b.conn.Read(buf); err != nil {
-		return "", err
-	}
-	return string(buf), nil
+	return b.readLine()
 }
 
-func newConn(path string) (net.Conn, error) {
-	c, err := net.Dial("unix", path)
-	if err != nil {
-		return nil, err
+func (b *BIRDClient) readLine() (string, error) {
+	if !b.scanner.Scan() {
+		return "", fmt.Errorf("reading response from bird failed")
 	}
-	if _, err := c.Read(make([]byte, 4096)); err != nil {
-		c.Close()
-		return nil, err
+	if err := b.scanner.Err(); err != nil {
+		return "", err
 	}
-	return c, nil
+	return b.scanner.Text(), nil
 }
