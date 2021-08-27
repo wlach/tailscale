@@ -61,6 +61,8 @@ type Options struct {
 	// StatePath is the path to the stored agent state.
 	StatePath string
 
+	KubeSecret string
+
 	// AutostartStateKey, if non-empty, immediately starts the agent
 	// using the given StateKey. If empty, the agent stays idle and
 	// waits for a frontend to start it.
@@ -612,7 +614,12 @@ func Run(ctx context.Context, logf logger.Logf, logid string, getEngine func() (
 	logf("Listening on %v", listen.Addr())
 
 	var store ipn.StateStore
-	if opts.StatePath != "" {
+	if opts.KubeSecret != "" {
+		store, err = ipn.NewKubeStore(opts.KubeSecret)
+		if err != nil {
+			return fmt.Errorf("ipn.NewKubeStore(%q): %v", opts.StatePath, err)
+		}
+	} else if opts.StatePath != "" {
 		store, err = ipn.NewFileStore(opts.StatePath)
 		if err != nil {
 			return fmt.Errorf("ipn.NewFileStore(%q): %v", opts.StatePath, err)

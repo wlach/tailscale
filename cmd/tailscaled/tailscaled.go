@@ -77,6 +77,7 @@ var args struct {
 	debug      string
 	port       uint16
 	statepath  string
+	kubesecret string
 	socketpath string
 	verbose    int
 	socksAddr  string // listen address for SOCKS5 server
@@ -112,6 +113,7 @@ func main() {
 	flag.StringVar(&args.statepath, "state", paths.DefaultTailscaledStateFile(), "path of state file")
 	flag.StringVar(&args.socketpath, "socket", paths.DefaultTailscaledSocket(), "path of the service unix socket")
 	flag.BoolVar(&printVersion, "version", false, "print version information and exit")
+	flag.StringVar(&args.kubesecret, "kube-secret", "", "use kubernetes secrets as the state store")
 
 	if len(os.Args) > 1 {
 		sub := os.Args[1]
@@ -202,6 +204,7 @@ func ipnServerOpts() (o ipnserver.Options) {
 	o.Port = 41112
 	o.StatePath = args.statepath
 	o.SocketPath = args.socketpath // even for goos=="windows", for tests
+	o.KubeSecret = args.kubesecret
 
 	switch goos {
 	default:
@@ -250,7 +253,7 @@ func run() error {
 		return nil
 	}
 
-	if args.statepath == "" {
+	if args.statepath == "" && args.kubesecret == "" {
 		log.Fatalf("--state is required")
 	}
 	if err := trySynologyMigration(args.statepath); err != nil {
